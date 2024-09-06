@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, Platform, Button, View, TextInput, FlatList, Alert, Linking } from 'react-native';
+import { StyleSheet, Platform, Button, View, TextInput, FlatList, Alert, ImageBackground } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
@@ -8,6 +8,7 @@ import * as SMS from 'expo-sms';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { getBackgroundImage } from '@/helper/getBackgroundImage';
 
 interface Contact {
   id: string;
@@ -25,7 +26,7 @@ const isValidPhoneNumber = (phoneNumber: string): boolean => {
 };
 
 const configureShake = (onShake: () => void) => {
-  const SHAKE_THRESHOLD = 10;
+  const SHAKE_THRESHOLD = 100;
   const TIME_THRESHOLD = 200;
   const COOLDOWN_PERIOD = 2000;
 
@@ -66,6 +67,7 @@ export default function EmergencyScreen() {
   const [emergencyNumber, setEmergencyNumber] = useState('');
   const [tempEmergencyNumber, setTempEmergencyNumber] = useState('');
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const lastShakeTime = useRef(0);
 
   const handleEmergency = async () => {
@@ -122,6 +124,10 @@ export default function EmergencyScreen() {
       handleEmergency();
     });
 
+    getBackgroundImage().then((backgroundImageStored) => {
+      setBackgroundImage(backgroundImageStored)
+    })
+
     return () => {
       subscription.remove();
     }
@@ -158,31 +164,36 @@ export default function EmergencyScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Button title='Añadir/Editar número de emergencia' onPress={toggleModal} />
-      <Modal isVisible={isModalVisible}>
-        <ThemedView style={styles.modalContent}>
-          <TextInput 
-            value={tempEmergencyNumber} 
-            onChangeText={setTempEmergencyNumber}
-            keyboardType='phone-pad'
-            style={styles.input}
-            placeholder="Ingresa el número de emergencia"
-          />
-          <Button title='Guardar' onPress={editEmergencyNumber} />
-          <Button title='Cancelar' onPress={toggleModal} />
-        </ThemedView>
-      </Modal>
-      <ThemedText style={styles.emergencyNumberDisplay}>
-        Número de emergencia actual: {emergencyNumber}
-      </ThemedText>
-      <ThemedText style={styles.instructions}>
-        Agita el dispositivo para activar la llamada de emergencia
-      </ThemedText>
-      <FlatList
-        data={contacts}
-        renderItem={renderContact}
-        keyExtractor={item => item.id}
-      />
+      <ImageBackground 
+        source={backgroundImage ? { uri: backgroundImage } : undefined}
+        style={{ flex: 1 }}
+      >
+        <Button title='Añadir/Editar número de emergencia' onPress={toggleModal} />
+        <Modal isVisible={isModalVisible}>
+          <ThemedView style={styles.modalContent}>
+            <TextInput 
+              value={tempEmergencyNumber} 
+              onChangeText={setTempEmergencyNumber}
+              keyboardType='phone-pad'
+              style={styles.input}
+              placeholder="Ingresa el número de emergencia"
+            />
+            <Button title='Guardar' onPress={editEmergencyNumber} />
+            <Button title='Cancelar' onPress={toggleModal} />
+          </ThemedView>
+        </Modal>
+        <ThemedText style={styles.emergencyNumberDisplay}>
+          Número de emergencia actual: {emergencyNumber}
+        </ThemedText>
+        <ThemedText style={styles.instructions}>
+          Agita el dispositivo para activar la llamada de emergencia
+        </ThemedText>
+        <FlatList
+          data={contacts}
+          renderItem={renderContact}
+          keyExtractor={item => item.id}
+        />
+      </ImageBackground>
     </SafeAreaView>
   );
 }
