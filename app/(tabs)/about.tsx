@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Button, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
+import { Button, Pressable, SafeAreaView, StyleSheet, Text, View, ImageBackground } from 'react-native'
 import Modal from 'react-native-modal'
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
+import { getBackgroundImage } from '@/helper/getBackgroundImage';
 
 export default function About () {
     const [ isVisible, setIsVisible ] = useState(false);
@@ -10,6 +11,7 @@ export default function About () {
     const [ show, setShow ] = useState(false)
     const [scanned, setScanned] = useState(false);
     const [data, setData] = useState()
+    const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
 
     const askCameraPermission = async () => {
         setShow(!show)
@@ -23,33 +25,44 @@ export default function About () {
         setIsVisible(true)
     };
 
+    useEffect(() => {
+        getBackgroundImage().then((backgroundImageStored) => {
+            setBackgroundImage(backgroundImageStored)
+        })
+    }, [])
+
     return (
-        <SafeAreaView style={styles.container}>
-            <Modal isVisible={isVisible}>
-                <View style={styles.modal}>
-                    <Text style={{fontSize: 18, fontWeight: 'bold'}}>{data}</Text>
-                    <Button title='Cancelar' onPress={() => setIsVisible(!isVisible)} />
-                </View>
-            </Modal>
-            <CameraView
-                style={[styles.scanner, show && {opacity: 1}]}
-                barcodeScannerSettings={{
-                barcodeTypes: ['qr'],
-                }}
-                onBarcodeScanned={handleAfterScanned}
-            >
-                <View style={styles.overlay}>
-                    <Text style={styles.scanText}>Escanea un código QR</Text>
-                </View>
-            </CameraView>
-            <Pressable style={styles.boton} onPress={askCameraPermission}>
-                <Text style={styles.textoBoton}>Escanear</Text>
-            </Pressable>
-            <Image
-                style={styles.image}
-                source={require('../../assets/images/data.png')}
-            />
-        </SafeAreaView>
+        <ImageBackground 
+            source={backgroundImage ? { uri: backgroundImage } : undefined}
+            style={{ flex: 1 }}
+        >
+            <SafeAreaView style={styles.container}>
+                <Modal isVisible={isVisible}>
+                    <View style={styles.modal}>
+                        <Text style={{fontSize: 18, fontWeight: 'bold'}}>{data}</Text>
+                        <Button title='Cancelar' onPress={() => setIsVisible(!isVisible)} />
+                    </View>
+                </Modal>
+                <CameraView
+                    style={[styles.scanner, show && {opacity: 1}]}
+                    barcodeScannerSettings={{
+                    barcodeTypes: ['qr'],
+                    }}
+                    onBarcodeScanned={handleAfterScanned}
+                >
+                    <View style={styles.overlay}>
+                        <Text style={styles.scanText}>Escanea un código QR</Text>
+                    </View>
+                </CameraView>
+                <Pressable style={styles.boton} onPress={askCameraPermission}>
+                    <Text style={styles.textoBoton}>Escanear</Text>
+                </Pressable>
+                <Image
+                    style={styles.image}
+                    source={require('../../assets/images/data.png')}
+                />
+            </SafeAreaView>
+        </ImageBackground>
     )
 }
 
