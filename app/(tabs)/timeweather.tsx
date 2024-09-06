@@ -18,7 +18,7 @@ export default function TimeWeather () {
   const [location, setLocation] = useState<Region | undefined>();
   const [weatherData, setWeatherData] = useState()
 
-  const [date, setDate] = useState(daysjs())
+  const [date, setDate] = useState(dayjs())
 
   const handleRegionChangeComplete = (region : MapRegion) => {
     setLocation(region)
@@ -58,14 +58,16 @@ export default function TimeWeather () {
     }
   };
 
+  useEffect(() => {
+    setInterval(() => {
+      setDate(dayjs());
+    }, 1000 * 1);
+  }, []);
+
   return (
-    <SafeAreaView>
-      <MapView
-        style={styles.map}
-        onRegionChangeComplete={handleRegionChangeComplete}
-        showsUserLocation
-        ref={mapRef}
-      />
+    <SafeAreaView style={{width: '94%', marginHorizontal: '3%'}}>
+      <Text style={styles.title}>{date.format("dddd, DD MMMM")}</Text>
+      <Text style={styles.clock}>{date.format("hh:mm:ss")}</Text>
       <Text style={styles.title}>Clima Actual</Text>
       {
         weatherData ?
@@ -77,8 +79,12 @@ export default function TimeWeather () {
         :
           <Text style={styles.text}>Cargando...</Text>
       }
-      <Text style={styles.date}>{dayjs().format("dddd, DD MMMM")}</Text>
-      <Text style={styles.time}>{dayjs().format("hh:mm")}</Text>
+      <MapView
+        style={styles.map}
+        onRegionChangeComplete={handleRegionChangeComplete}
+        showsUserLocation
+        ref={mapRef}
+      />
     </SafeAreaView>
   )
 }
@@ -87,16 +93,26 @@ export default function TimeWeather () {
 const styles = StyleSheet.create({
   map: {
     height: 250,
-    width: '90%',
-    marginHorizontal: '5%'
+    width: '100%',
+    marginTop: 20,
+    borderRadius: 20
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
+    color: 'white',
+    marginTop: 10,
+    textAlign: 'center'
   },
   text: {
     fontSize: 18,
     marginBottom: 10,
+    color: 'white'
+  },
+  clock: {
+    fontSize: 26,
+    color: 'white',
+    textAlign: 'center'
   }
 });
