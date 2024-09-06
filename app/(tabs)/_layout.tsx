@@ -32,6 +32,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="change_background"
+        options={{
+          title: 'Cambiar Fondo',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'color-palette' : 'color-palette-outline'} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
