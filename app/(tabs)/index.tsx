@@ -52,20 +52,20 @@ export default function EmergencyScreen() {
   const [contacts, setContacts] = useState<Contact[]>([]);
 
   const handleEmergency = async () => {
-    if (emergencyNumber) {
-      const isAvailable = await SMS.isAvailableAsync();
-      if (!isAvailable) {
-        return Alert.alert('SMS no disponible', 'Tu dispositivo no soporta el envío de mensajes de texto.');
-      }
-      const { result } = await SMS.sendSMSAsync(emergencyNumber, '¡Emergencia!');
-      if (result === 'sent') {
-        Alert.alert('Mensaje enviado', 'Se ha enviado un mensaje de texto al número de emergencia.');
-      } else {
-        Alert.alert('Error al enviar mensaje', 'Hubo un error al enviar el mensaje de texto.');
-      }
-    } else {
-      Alert.alert('No hay número de emergencia', 'Por favor, configura un número de emergencia primero.');
-    }
+    // if (emergencyNumber) {
+    //   const isAvailable = await SMS.isAvailableAsync();
+    //   if (!isAvailable) {
+    //     return Alert.alert('SMS no disponible', 'Tu dispositivo no soporta el envío de mensajes de texto.');
+    //   }
+    //   const { result } = await SMS.sendSMSAsync(emergencyNumber, '¡Emergencia!');
+    //   if (result === 'sent') {
+    //     Alert.alert('Mensaje enviado', 'Se ha enviado un mensaje de texto al número de emergencia.');
+    //   } else {
+    //     Alert.alert('Error al enviar mensaje', 'Hubo un error al enviar el mensaje de texto.');
+    //   }
+    // } else {
+    //   Alert.alert('No hay número de emergencia', 'Por favor, configura un número de emergencia primero.');
+    // }
   };
   useEffect(() => {
     const fetchEmergencyNumber = async () => {
