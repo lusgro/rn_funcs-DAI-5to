@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Platform, Button, View, TextInput, FlatList, Alert, Linking } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { StyleSheet, Platform, Button, View, TextInput, FlatList, Alert, ImageBackground } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
@@ -8,6 +8,7 @@ import * as SMS from 'expo-sms';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { getBackgroundImage } from '@/helper/getBackgroundImage';
 
 interface Contact {
   id: string;
@@ -25,22 +26,38 @@ const isValidPhoneNumber = (phoneNumber: string): boolean => {
 };
 
 const configureShake = (onShake: () => void) => {
+  const SHAKE_THRESHOLD = 100;
+  const TIME_THRESHOLD = 200;
+  const COOLDOWN_PERIOD = 2000;
+
   let lastUpdate = 0;
-  const SHAKE_THRESHOLD = 800;
-  const SHAKE_TIMEOUT = 1000;
+  let lastShake = 0;
+  let lastX = 0, lastY = 0, lastZ = 0;
 
   Accelerometer.setUpdateInterval(100);
   
   return Accelerometer.addListener(accelerometerData => {
     const { x, y, z } = accelerometerData;
     const currentTime = new Date().getTime();
-    if ((currentTime - lastUpdate) > SHAKE_TIMEOUT) {
-      const diffTime = currentTime - lastUpdate;
+
+    if ((currentTime - lastUpdate) > 100) {
+      const timeDiff = currentTime - lastUpdate;
       lastUpdate = currentTime;
-      const speed = Math.abs(x + y + z - lastUpdate) / diffTime * 10000;
+
+      const speed = Math.abs(x + y + z - lastX - lastY - lastZ) / timeDiff * 10000;
+
       if (speed > SHAKE_THRESHOLD) {
-        onShake();
+        if (currentTime - lastShake > TIME_THRESHOLD) {
+          if (currentTime - lastShake > COOLDOWN_PERIOD) {
+            onShake();
+          }
+          lastShake = currentTime;
+        }
       }
+
+      lastX = x;
+      lastY = y;
+      lastZ = z;
     }
   });
 };
@@ -50,22 +67,31 @@ export default function EmergencyScreen() {
   const [emergencyNumber, setEmergencyNumber] = useState('');
   const [tempEmergencyNumber, setTempEmergencyNumber] = useState('');
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  const lastShakeTime = useRef(0);
 
   const handleEmergency = async () => {
-    // if (emergencyNumber) {
-    //   const isAvailable = await SMS.isAvailableAsync();
-    //   if (!isAvailable) {
-    //     return Alert.alert('SMS no disponible', 'Tu dispositivo no soporta el envío de mensajes de texto.');
-    //   }
-    //   const { result } = await SMS.sendSMSAsync(emergencyNumber, '¡Emergencia!');
-    //   if (result === 'sent') {
-    //     Alert.alert('Mensaje enviado', 'Se ha enviado un mensaje de texto al número de emergencia.');
-    //   } else {
-    //     Alert.alert('Error al enviar mensaje', 'Hubo un error al enviar el mensaje de texto.');
-    //   }
-    // } else {
-    //   Alert.alert('No hay número de emergencia', 'Por favor, configura un número de emergencia primero.');
-    // }
+    const currentTime = new Date().getTime();
+    if (currentTime - lastShakeTime.current < 5000) {
+      console.log("Agitado recientemente: ignorar");
+      return;
+    }
+    lastShakeTime.current = currentTime;
+
+    if (emergencyNumber) {
+      const isAvailable = await SMS.isAvailableAsync();
+      if (!isAvailable) {
+        return Alert.alert('SMS no disponible', 'Tu dispositivo no soporta el envío de mensajes de texto.');
+      }
+      const { result } = await SMS.sendSMSAsync(emergencyNumber, '¡Emergencia!');
+      if (result === 'sent') {
+        Alert.alert('Mensaje enviado', 'Se ha enviado un mensaje de texto al número de emergencia.');
+      } else {
+        Alert.alert('Error al enviar mensaje', 'Hubo un error al enviar el mensaje de texto.');
+      }
+    } else {
+      Alert.alert('No hay número de emergencia', 'Por favor, configura un número de emergencia primero.');
+    }
   };
   useEffect(() => {
     const fetchEmergencyNumber = async () => {
@@ -94,7 +120,13 @@ export default function EmergencyScreen() {
 
     fetchEmergencyNumber();
     requestContactsPermission();
-    const subscription = configureShake(handleEmergency);
+    const subscription = configureShake(() => {
+      handleEmergency();
+    });
+
+    getBackgroundImage().then((backgroundImageStored) => {
+      setBackgroundImage(backgroundImageStored)
+    })
 
     return () => {
       subscription.remove();
@@ -132,31 +164,36 @@ export default function EmergencyScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Button title='Añadir/Editar número de emergencia' onPress={toggleModal} />
-      <Modal isVisible={isModalVisible}>
-        <ThemedView style={styles.modalContent}>
-          <TextInput 
-            value={tempEmergencyNumber} 
-            onChangeText={setTempEmergencyNumber}
-            keyboardType='phone-pad'
-            style={styles.input}
-            placeholder="Ingresa el número de emergencia"
-          />
-          <Button title='Guardar' onPress={editEmergencyNumber} />
-          <Button title='Cancelar' onPress={toggleModal} />
-        </ThemedView>
-      </Modal>
-      <ThemedText style={styles.emergencyNumberDisplay}>
-        Número de emergencia actual: {emergencyNumber}
-      </ThemedText>
-      <ThemedText style={styles.instructions}>
-        Agita el dispositivo para activar la llamada de emergencia
-      </ThemedText>
-      <FlatList
-        data={contacts}
-        renderItem={renderContact}
-        keyExtractor={item => item.id}
-      />
+      <ImageBackground 
+        source={backgroundImage ? { uri: backgroundImage } : undefined}
+        style={{ flex: 1 }}
+      >
+        <Button title='Añadir/Editar número de emergencia' onPress={toggleModal} />
+        <Modal isVisible={isModalVisible}>
+          <ThemedView style={styles.modalContent}>
+            <TextInput 
+              value={tempEmergencyNumber} 
+              onChangeText={setTempEmergencyNumber}
+              keyboardType='phone-pad'
+              style={styles.input}
+              placeholder="Ingresa el número de emergencia"
+            />
+            <Button title='Guardar' onPress={editEmergencyNumber} />
+            <Button title='Cancelar' onPress={toggleModal} />
+          </ThemedView>
+        </Modal>
+        <ThemedText style={styles.emergencyNumberDisplay}>
+          Número de emergencia actual: {emergencyNumber}
+        </ThemedText>
+        <ThemedText style={styles.instructions}>
+          Agita el dispositivo para activar la llamada de emergencia
+        </ThemedText>
+        <FlatList
+          data={contacts}
+          renderItem={renderContact}
+          keyExtractor={item => item.id}
+        />
+      </ImageBackground>
     </SafeAreaView>
   );
 }
