@@ -2,33 +2,26 @@ import React, { useState, useRef, useEffect } from "react";
 import { StyleSheet, View, Text, TouchableOpacity, ImageBackground } from "react-native";
 import { Camera, CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getBackgroundImage } from "@/helper/getBackgroundImage";
+import { useBackground } from '@/context/BackgroundContext';
 
 export default function ChangeBackgroundScreen() {
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-    const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
     const [isCameraActive, setIsCameraActive] = useState(false);
     const cameraRef = useRef<Camera | null>(null);
+    const { backgroundImage, updateBackgroundImage } = useBackground();
     
     useEffect(() => {
         (async () => {
             const { status } = await Camera.requestCameraPermissionsAsync();
             setHasPermission(status === 'granted');
-            const savedImage = await AsyncStorage.getItem('backgroundImage');
-            if (savedImage) setBackgroundImage(savedImage);
         })();
-        getBackgroundImage().then((backgroundImageStored) => {
-            setBackgroundImage(backgroundImageStored)
-          })
     }, []);
     
     const handleTakePicture = async () => {
         if (!cameraRef.current) return;
     
         const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
-        await AsyncStorage.setItem('backgroundImage', photo.uri);
-        setBackgroundImage(photo.uri);
+        await updateBackgroundImage(photo.uri);
         setIsCameraActive(false);
     };
     
@@ -39,8 +32,7 @@ export default function ChangeBackgroundScreen() {
         });
     
         if (!result.canceled && result.assets[0].uri) {
-            await AsyncStorage.setItem('backgroundImage', result.assets[0].uri);
-            setBackgroundImage(result.assets[0].uri);
+            await updateBackgroundImage(result.assets[0].uri);
         }
     };
 

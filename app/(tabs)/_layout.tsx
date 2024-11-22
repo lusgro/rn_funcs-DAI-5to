@@ -5,20 +5,10 @@ import { ImageBackground } from 'react-native';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useBackground } from '@/context/BackgroundContext';
 
 export default function TabLayout() {
-  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  useEffect(() => {
-    async function loadBackgroundImage() {
-      const backgroundImage = await AsyncStorage.getItem('backgroundImage');
-      if (backgroundImage) {
-        setBackgroundImage(backgroundImage);
-      }
-    }
-    loadBackgroundImage();
-  }, []);
-  
+  const { backgroundImage } = useBackground();
   const colorScheme = useColorScheme();
 
   return (
@@ -41,15 +31,6 @@ export default function TabLayout() {
             title: 'Emergencia',
             tabBarIcon: ({ color, focused }) => (
               <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="explore"
-          options={{
-            title: 'Explore',
-            tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name={focused ? 'code-slash' : 'code-slash-outline'} color={color} />
             ),
           }}
         />

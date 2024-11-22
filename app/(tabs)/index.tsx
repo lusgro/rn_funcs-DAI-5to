@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, Platform, Button, View, TextInput, FlatList, Alert, ImageBackground } from 'react-native';
+import { StyleSheet, Platform, Button, View, TextInput, FlatList, Alert, ImageBackground, Text } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
@@ -8,7 +8,7 @@ import * as SMS from 'expo-sms';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { getBackgroundImage } from '@/helper/getBackgroundImage';
+import { useBackground } from '@/context/BackgroundContext';
 
 interface Contact {
   id: string;
@@ -67,8 +67,8 @@ export default function EmergencyScreen() {
   const [emergencyNumber, setEmergencyNumber] = useState('');
   const [tempEmergencyNumber, setTempEmergencyNumber] = useState('');
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const lastShakeTime = useRef(0);
+  const { backgroundImage } = useBackground();
 
   const handleEmergency = async () => {
     const currentTime = new Date().getTime();
@@ -124,10 +124,6 @@ export default function EmergencyScreen() {
       handleEmergency();
     });
 
-    getBackgroundImage().then((backgroundImageStored) => {
-      setBackgroundImage(backgroundImageStored)
-    })
-
     return () => {
       subscription.remove();
     }
@@ -154,8 +150,8 @@ export default function EmergencyScreen() {
       styles.contactItem, 
       normalizePhoneNumber(item.phoneNumber) === normalizePhoneNumber(emergencyNumber) && styles.emergencyContact
     ]}>
-      <ThemedText>{item.name}</ThemedText>
-      <ThemedText>{item.phoneNumber}</ThemedText>
+      <ThemedText style={styles.contactText}>{item.name}</ThemedText>
+      <ThemedText style={styles.contactNumber}>{item.phoneNumber}</ThemedText>
       {normalizePhoneNumber(item.phoneNumber) === normalizePhoneNumber(emergencyNumber) && (
         <ThemedText style={styles.emergencyLabel}>Contacto de emergencia</ThemedText>
       )}
@@ -163,14 +159,14 @@ export default function EmergencyScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ImageBackground 
-        source={backgroundImage ? { uri: backgroundImage } : undefined}
-        style={{ flex: 1 }}
-      >
+    <ImageBackground 
+      source={backgroundImage ? { uri: backgroundImage } : undefined}
+      style={{ flex: 1 }}
+    >
+      <SafeAreaView style={styles.container}>
         <Button title='Añadir/Editar número de emergencia' onPress={toggleModal} />
         <Modal isVisible={isModalVisible}>
-          <ThemedView style={styles.modalContent}>
+          <View style={styles.modalContent}>
             <TextInput 
               value={tempEmergencyNumber} 
               onChangeText={setTempEmergencyNumber}
@@ -180,65 +176,99 @@ export default function EmergencyScreen() {
             />
             <Button title='Guardar' onPress={editEmergencyNumber} />
             <Button title='Cancelar' onPress={toggleModal} />
-          </ThemedView>
+          </View>
         </Modal>
-        <ThemedText style={styles.emergencyNumberDisplay}>
-          Número de emergencia actual: {emergencyNumber}
-        </ThemedText>
-        <ThemedText style={styles.instructions}>
-          Agita el dispositivo para activar la llamada de emergencia
-        </ThemedText>
+        <View style={styles.emergencyNumberContainer}>
+          <Text style={styles.emergencyNumberDisplay}>
+            Número de emergencia actual: {emergencyNumber}
+          </Text>
+          <Text style={styles.instructions}>
+            Agita el dispositivo para activar la llamada de emergencia
+          </Text>
+        </View>
         <FlatList
           data={contacts}
           renderItem={renderContact}
           keyExtractor={item => item.id}
+          style={styles.contactList}
         />
-      </ImageBackground>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
+    padding: 16,
   },
   contactItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  contactText: {
+    color: '#ffffff',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  contactNumber: {
+    color: '#ffffff',
+    fontSize: 14,
   },
   emergencyContact: {
-    backgroundColor: '#ffe6e6',
+    backgroundColor: 'rgba(255, 0, 0, 0.7)',
+    borderWidth: 2,
+    borderColor: '#ff4444',
   },
   emergencyLabel: {
-    color: 'red',
+    color: '#ffffff',
     fontWeight: 'bold',
+    marginTop: 5,
   },
   modalContent: {
     backgroundColor: 'white',
     padding: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 4,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   input: {
     width: '100%',
-    marginBottom: 10,
-    padding: 10,
+    marginBottom: 15,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    fontSize: 16,
+  },
+  emergencyNumberContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    padding: 15,
+    borderRadius: 8,
+    marginVertical: 15,
   },
   emergencyNumberDisplay: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginVertical: 10,
+    color: '#333',
+    marginBottom: 5,
   },
   instructions: {
     fontSize: 14,
     fontStyle: 'italic',
-    marginBottom: 10,
+    color: '#666',
   },
+  contactList: {
+    marginTop: 10,
+  }
 });
